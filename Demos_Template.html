@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottie Animation — Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d0e12;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #lottie-container {
+            width: 320px;
+            height: 320px;
+            background: #0d0e12;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+</head>
+<body>
+    <div id="lottie-container"></div>
+    <div style="display:none; color:#888; font-family:sans-serif; text-align:center; padding:20px;" id="no-data">
+        No animation data found.<br>Drop a <kbd>.json</kbd> file or edit this file.<br><br>
+        <span style="font-size:13px; color:#555;">Or use <b>lottie-preview.html</b> for the full viewer.</span>
+    </div>
+
+    <script>
+        // Paste your Lottie JSON directly below:
+        const animationData = null;
+        
+        if (animationData) {
+            lottie.loadAnimation({
+                container: document.getElementById('lottie-container'),
+                renderer: 'canvas',
+                loop: true,
+                autoplay: true,
+                animationData: animationData
+            });
+        } else {
+            document.getElementById('no-data').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

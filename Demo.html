@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottie Animation — Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d0e12;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #lottie-container {
+            width: 320px;
+            height: 320px;
+            background: #0d0e12;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+</head>
+<body>
+    <div id="lottie-container"></div>
+    <div style="display:none; color:#888; font-family:sans-serif; text-align:center; padding:20px;" id="no-data">
+        No animation data found.<br>Drop a <kbd>.json</kbd> file or edit this file.<br><br>
+        <span style="font-size:13px; color:#555;">Or use <b>lottie-preview.html</b> for the full viewer.</span>
+    </div>
+
+    <script>
+        const animationData = {"layers": [{"ddd": 0, "ty": 4, "ind": 0, "sr": 1, "ip": 0, "op": 180, "st": 0, "ks": {"a": {"k": [0, 0], "a": 0}, "p": {"k": [0, 0], "a": 0}, "s": {"k": [100, 100], "a": 0}, "r": {"k": 0, "a": 0}, "o": {"k": 100, "a": 0}, "sk": {"k": 0, "a": 0}, "sa": {"k": 0, "a": 0}}, "ao": 0, "bm": 0, "shapes": [{"nm": "line-1", "ty": "gr", "it": [{"ty": "gr", "it": [{"ty": "sh", "d": 1, "ks": {"k": {"c": false, "i": [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], "o": [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], "v": [[22, 12], [18, 12], [15, 21], [9, 3], [6, 12], [2, 12]]}, "a": 0}}, {"ty": "st", "lc": 2, "lj": 2, "ml": 0, "o": {"k": 100, "a": 0}, "w": {"k": 2, "a": 0}, "c": {"k": [1, 1, 1, 1], "a": 0}}, {"ty": "tr", "a": {"k": [12, 12], "a": 0}, "p": {"k": [12, 12], "a": 0}, "s": {"a": 1, "k": [{"t": 0, "i": {"x": [1], "y": [1]}, "o": {"x": [0], "y": [0]}, "s": [0, 0]}, {"t": 22, "i": {"x": [1], "y": [1]}, "o": {"x": [0], "y": [0]}, "s": [110, 110]}, {"t": 45, "s": [100, 100]}]}, "r": {"k": 0, "a": 0}, "o": {"a": 1, "k": [{"t": 0, "i": {"x": [1], "y": [1]}, "o": {"x": [0], "y": [0]}, "s": [0]}, {"t": 22, "s": [100]}]}, "sk": {"k": 0, "a": 0}, "sa": {"k": 0, "a": 0}}]}, {"ty": "tr", "a": {"k": [0, 0], "a": 0}, "p": {"k": [0, 0], "a": 0}, "s": {"k": [100, 100], "a": 0}, "r": {"k": 0, "a": 0}, "o": {"k": 100, "a": 0}, "sk": {"k": 0, "a": 0}, "sa": {"k": 0, "a": 0}}]}]}], "nm": "elastic_pop", "v": "5.5.2", "fr": 60, "ip": 0, "op": 180, "w": 24, "h": 24, "ddd": 0, "assets": []};
+        
+        if (animationData) {
+            lottie.loadAnimation({
+                container: document.getElementById('lottie-container'),
+                renderer: 'canvas',
+                loop: true,
+                autoplay: true,
+                animationData: animationData
+            });
+        } else {
+            document.getElementById('no-data').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

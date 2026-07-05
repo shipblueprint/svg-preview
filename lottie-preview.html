@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottie & DotLottie Preview Studio</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d0e12;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+        }
+        #lottie-wrap {
+            width: 80vmin;
+            height: 80vmin;
+            position: relative;
+            border-radius: 8px;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+        }
+        #lottie-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+        #ui-hint {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 21, 26, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 10px 20px;
+            display: flex;
+            gap: 18px;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        #ui-hint.visible { opacity: 1; }
+        kbd {
+            background: #2e303f;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: monospace;
+            font-weight: bold;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 21, 26, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+            pointer-events: none;
+        }
+        #status.show { opacity: 1; }
+        #open-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 14px;
+            z-index: 30;
+            background: rgba(13,14,18,0.55);
+            backdrop-filter: blur(3px);
+            border-radius: 8px;
+            transition: opacity 0.3s;
+        }
+        #open-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #open-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border: none;
+            color: #fff;
+            padding: 14px 32px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+            pointer-events: auto;
+            z-index: 31;
+        }
+        #open-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 28px rgba(99,102,241,0.45);
+        }
+        #open-hint {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            pointer-events: none;
+        }
+        #drop-zone {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(13, 14, 18, 0.92);
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 8px;
+            z-index: 40;
+            font-size: 18px;
+            color: rgba(255,255,255,0.8);
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        #drop-zone .sub {
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+        }
+        body.dragover #drop-zone { display: flex; }
+        #file-input { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="status">Ready</div>
+    <input type="file" id="file-input" accept=".json,.lottie" />
+    
+    <div id="lottie-wrap">
+        <div id="drop-zone">
+            <div>Drop file here</div>
+            <div class="sub">.json &nbsp;or&nbsp; .lottie</div>
+        </div>
+        <div id="lottie-container">
+            <div id="open-overlay">
+                <button id="open-btn">Open Animation File</button>
+                <div id="open-hint">or drag & drop  &nbsp;•&nbsp;  .json prioritized</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="ui-hint">
+        <div><kbd>P</kbd> Save Transparent PNG</div>
+        <div><kbd>V</kbd> Record WebM Loop (3s)</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        const container = document.getElementById('lottie-container');
+        const statusEl = document.getElementById('status');
+        const fileInput = document.getElementById('file-input');
+        const openBtn = document.getElementById('open-btn');
+        const openOverlay = document.getElementById('open-overlay');
+        const uiHint = document.getElementById('ui-hint');
+        const dropZone = document.getElementById('drop-zone');
+        let anim = null;
+        let canvas = null;
+        let isLoaded = false;
+        
+        function showStatus(msg, duration = 2000) {
+            statusEl.textContent = msg;
+            statusEl.classList.add('show');
+            setTimeout(() => statusEl.classList.remove('show'), duration);
+        }
+
+        function onLoaded() {
+            isLoaded = true;
+            openOverlay.classList.add('hidden');
+            uiHint.classList.add('visible');
+        }
+
+        function loadAnimation(data) {
+            if (anim) { anim.destroy(); }
+            
+            anim = lottie.loadAnimation({
+                container: container,
+                renderer: 'canvas',
+                loop: true,
+                autoplay: true,
+                animationData: data,
+                rendererSettings: {
+                    preserveAspectRatio: 'xMidYMid meet',
+                    clearCanvas: true,
+                }
+            });
+            
+            anim.addEventListener('DOMLoaded', () => {
+                canvas = container.querySelector('canvas');
+                if (canvas) {
+                    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                    const rect = container.getBoundingClientRect();
+                    canvas.width = rect.width * dpr;
+                    canvas.height = rect.height * dpr;
+                }
+                onLoaded();
+                showStatus('Animation loaded');
+            });
+            
+            anim.addEventListener('data_failed', () => {
+                showStatus('Failed to parse animation data', 3000);
+            });
+        }
+
+        // --- Parse file: JSON or .lottie ZIP (supports v1.0 and v2.0) ---
+        async function parseFile(file) {
+            const buf = await file.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            
+            // ZIP magic: 0x50 0x4B
+            const isZip = bytes.length > 2 && bytes[0] === 0x50 && bytes[1] === 0x4B;
+            
+            if (!isZip) {
+                const text = new TextDecoder().decode(bytes);
+                return JSON.parse(text);
+            }
+            
+            const zip = await JSZip.loadAsync(buf);
+            
+            // Read manifest
+            let manifest = null;
+            try {
+                const mf = zip.file('manifest.json');
+                if (mf) manifest = JSON.parse(await mf.async('string'));
+            } catch (e) { console.log('No manifest'); }
+            
+            // dotLottie v2.0 uses 'a/' and 'i/'
+            // dotLottie v1.0 uses 'animations/' and 'images/'
+            let animPath = null;
+            const allJson = [];
+            zip.forEach((rp, f) => {
+                if (rp.endsWith('.json') && rp !== 'manifest.json') allJson.push(rp);
+            });
+            
+            // Strategy 1: manifest v2.0 -> a/{id}.json
+            if (manifest && manifest.animations && manifest.animations.length > 0) {
+                const id = manifest.animations[0].id;
+                const v2 = 'a/' + id + '.json';
+                const v1 = 'animations/' + id + '.json';
+                if (zip.file(v2)) animPath = v2;
+                else if (zip.file(v1)) animPath = v1;
+            }
+            
+            // Strategy 2: manifest v2.0 initial
+            if (!animPath && manifest && manifest.initial && manifest.initial.animation) {
+                const id = manifest.initial.animation;
+                const v2 = 'a/' + id + '.json';
+                const v1 = 'animations/' + id + '.json';
+                if (zip.file(v2)) animPath = v2;
+                else if (zip.file(v1)) animPath = v1;
+            }
+            
+            // Strategy 3: any .json in a/ (v2.0)
+            if (!animPath) {
+                const aFiles = allJson.filter(rp => rp.startsWith('a/'));
+                if (aFiles.length) animPath = aFiles[0];
+            }
+            
+            // Strategy 4: any .json in animations/ (v1.0)
+            if (!animPath) {
+                const animFiles = allJson.filter(rp => rp.startsWith('animations/'));
+                if (animFiles.length) animPath = animFiles[0];
+            }
+            
+            // Strategy 5: any .json anywhere
+            if (!animPath && allJson.length) animPath = allJson[0];
+            
+            if (!animPath) throw new Error('No animation JSON found inside .lottie archive');
+            
+            console.log('Loading animation from:', animPath);
+            const animText = await zip.file(animPath).async('string');
+            const animJson = JSON.parse(animText);
+            
+            // Inline image assets (support both v1.0 images/ and v2.0 i/)
+            if (animJson.assets) {
+                for (const asset of animJson.assets) {
+                    if (asset.p && !asset.p.startsWith('data:')) {
+                        const fname = asset.p.split('/').pop();
+                        // Try v2.0 i/ first, then v1.0 images/, then raw filename
+                        const paths = ['i/' + asset.p, 'i/' + fname, 'images/' + asset.p, 'images/' + fname, asset.p, fname];
+                        let imgFile = null;
+                        for (const p of paths) {
+                            imgFile = zip.file(p);
+                            if (imgFile) break;
+                        }
+                        // Fallback: search by filename ending
+                        if (!imgFile) {
+                            zip.forEach((rp, f) => {
+                                if (rp.endsWith(fname) && !imgFile) imgFile = f;
+                            });
+                        }
+                        if (imgFile) {
+                            const ext = (fname.split('.').pop() || 'png').toLowerCase();
+                            const mime = ext === 'png' ? 'image/png' : (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg' : 'image/png';
+                            const b64 = await imgFile.async('base64');
+                            asset.p = 'data:' + mime + ';base64,' + b64;
+                            asset.e = 1;
+                        }
+                    }
+                }
+            }
+            
+            return animJson;
+        }
+
+        async function handleFile(file) {
+            try {
+                showStatus('Reading ' + file.name + '...', 1500);
+                const data = await parseFile(file);
+                loadAnimation(data);
+            } catch (err) {
+                console.error(err);
+                showStatus('Error: ' + err.message, 4000);
+            }
+        }
+
+        // --- Button click ---
+        openBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.value = '';
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // --- Drag & drop ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            window.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        
+        window.addEventListener('dragenter', () => {
+            document.body.classList.add('dragover');
+        });
+        
+        window.addEventListener('dragleave', (e) => {
+            if (e.relatedTarget === null) {
+                document.body.classList.remove('dragover');
+            }
+        });
+        
+        window.addEventListener('drop', (e) => {
+            document.body.classList.remove('dragover');
+            const dt = e.dataTransfer;
+            if (dt.files && dt.files.length > 0) {
+                handleFile(dt.files[0]);
+            }
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            document.body.classList.remove('dragover');
+            const dt = e.dataTransfer;
+            if (dt.files && dt.files.length > 0) {
+                handleFile(dt.files[0]);
+            }
+        });
+
+        // --- Auto-load from same folder (json prioritized) ---
+        const candidates = [
+            'Accounting.json', 'animation.json', 'data.json',
+            'Accounting.lottie', 'animation.lottie'
+        ];
+        
+        (async () => {
+            let loaded = false;
+            for (const name of candidates) {
+                try {
+                    const res = await fetch(name, { method: 'HEAD' });
+                    if (res.ok) {
+                        const fileRes = await fetch(name);
+                        if (!fileRes.ok) continue;
+                        const blob = await fileRes.blob();
+                        const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+                        await handleFile(file);
+                        loaded = true;
+                        break;
+                    }
+                } catch (e) {
+                    // fetch blocked on file:// or 404
+                }
+            }
+            if (!loaded) {
+                console.log('Auto-load skipped — use Open button or drag & drop');
+            }
+        })();
+
+        // --- P: Save Transparent PNG ---
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() !== 'p') return;
+            if (!canvas) { showStatus('No animation loaded'); return; }
+            
+            const w = canvas.width;
+            const h = canvas.height;
+            const tmp = document.createElement('canvas');
+            tmp.width = w;
+            tmp.height = h;
+            const ctx = tmp.getContext('2d');
+            
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(canvas, 0, 0);
+            
+            const url = tmp.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.download = 'lottie-frame-transparent.png';
+            a.href = url;
+            a.click();
+            
+            showStatus('Transparent PNG saved');
+        });
+
+        // --- V: Record WebM Video Loop ---
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() !== 'v') return;
+            if (!canvas) { showStatus('No animation loaded'); return; }
+            if (!anim) { showStatus('No animation loaded'); return; }
+            
+            anim.goToAndPlay(0, true);
+            
+            const stream = canvas.captureStream(60);
+            
+            let mimeType = 'video/webm; codecs=vp9';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm; codecs=vp8';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/webm';
+                }
+            }
+            
+            const recorder = new MediaRecorder(stream, { mimeType });
+            const chunks = [];
+            
+            recorder.ondataavailable = (ev) => {
+                if (ev.data.size > 0) chunks.push(ev.data);
+            };
+            
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.download = 'lottie-loop.webm';
+                a.href = url;
+                a.click();
+                showStatus('WebM loop saved');
+            };
+            
+            recorder.start();
+            showStatus('Recording 3s loop...');
+            setTimeout(() => recorder.stop(), 3000);
+        });
+
+        window.addEventListener('resize', () => {
+            if (!canvas || !anim) return;
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+        });
+    </script>
+</body>
+</html>
